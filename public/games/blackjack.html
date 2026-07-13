@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackjack — Flashino</title>
+<meta name="description" content="Beat the dealer to 21 without going over. Play Blackjack on Flashino — provably fair, play-money, no real value.">
+<script>
+  // Runs before first paint so there's no flash of the wrong theme.
+  (function(){
+    try{
+      var saved = localStorage.getItem('flashino-theme');
+      var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch(e){}
+  })();
+</script><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css?v=20260710b">
+</head>
+<body data-game="blackjack">
+
+<canvas id="starfield"></canvas>
+<div class="starfield-fade"></div>
+
+<header>
+  <nav class="wrap">
+    <a href="/" class="logo" aria-label="Flashino home">
+      <svg class="bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
+      Flash<span class="ino">ino</span>
+    </a>
+    <div class="nav-links">
+      <a href="/#games">Games</a>
+      <a href="/#rewards">Rewards</a>
+      <a href="/#affiliates">Affiliates</a>
+    </div>
+    <div class="nav-cta">
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle light and dark mode" title="Toggle theme">
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+        <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+      <div class="wallet-wrap">
+        <button class="wallet-trigger" id="walletBtn" aria-expanded="false" aria-haspopup="true">
+          <span class="wallet-trigger-guest">Sign In</span>
+          <span class="wallet-trigger-user">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2.5 3-2.5s3 .9 3 2.2c0 2.8-6 1.3-6 4 0 1.4 1.3 2.3 3 2.3s3-1 3-2.3"/></svg>
+            <span id="walletAmount">0.00</span>
+            <svg class="wallet-chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </span>
+        </button>
+        <button class="btn btn-gold" id="walletBtnSecondary" aria-expanded="false" aria-haspopup="true" style="display:none;">Wallet</button>
+        <div class="wallet-dropdown" id="walletDropdown">
+          <div class="wallet-row">
+            <span class="wallet-row-label">
+              <span class="wallet-row-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1.4 1.3-2.5 3-2.5s3 .9 3 2.2c0 2.8-6 1.3-6 4 0 1.4 1.3 2.3 3 2.3s3-1 3-2.3"/></svg>
+              </span>
+              SAB
+            </span>
+            <span class="wallet-row-amount" id="wdSabAmount">0.00</span>
+          </div>
+          <button type="button" class="wallet-info-toggle" id="walletInfoToggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+            What is this?
+          </button>
+          <p class="wallet-info-text" id="walletInfoText">SAB is Flashino's play-money balance. It's used across every game here, has no real-world value, and can't be bought, sold, or withdrawn.</p>
+          <div class="wallet-fun-row">
+            <button type="button" class="wallet-fun-btn yes" id="walletFunYes">Yes</button>
+            <button type="button" class="wallet-fun-btn no" id="walletFunNo">No</button>
+          </div>
+          <button type="button" class="btn btn-ghost wallet-reset-btn" id="resetBalanceBtn">Reset demo balance</button>
+        </div>
+      </div>
+      <a href="#" class="btn btn-ghost hide-mobile">Marketplace</a>
+      <div class="profile-wrap">
+        <button class="profile-chip" id="profileToggle" aria-expanded="false" aria-haspopup="true">
+          <span class="profile-avatar" id="navAvatar">?</span>
+          <span class="profile-meta"><b id="navUsername">Guest</b><small>Profile</small></span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="profile-dropdown" id="profileDropdown">
+          <a href="#" id="dropdownAccountLine" style="pointer-events:none; color:var(--text-3); font-size:11.5px;">Not logged in</a>
+          <a href="#" id="logoutLink">Log out</a>
+        </div>
+      </div>
+      <button class="menu-toggle" aria-label="Toggle menu" id="menuToggle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+  </nav>
+</header>
+<main>
+  <div class="wrap" style="padding:32px 24px 60px; position:relative; z-index:1;">
+    <a href="/" class="back-to-lobby">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      Back to lobby
+    </a>
+    <div class="game-page-header">
+      <div>
+        <h1>Blackjack</h1>
+        <p>Beat the dealer to 21 without going over.</p>
+      </div>
+    </div>
+    <div class="game-page-layout">
+      <div>
+        <div class="game-sign-in-gate" id="gameSignInGate">
+          <h3>Sign in to play Blackjack</h3>
+          <p>Create a free account and start with 1,000 SAB — play-money, no real value, no deposit needed.</p>
+          <button class="btn btn-primary" id="gateSignInBtn">Sign In</button>
+        </div>
+        <div class="game-balance">Balance: <b id="gmBalance">0.00</b></div>
+        <div class="game-page-stage" id="gamePageStage"></div>
+      </div>
+      <aside class="game-page-side">
+        <div class="activity-card">
+          <h3><span class="dot"></span>Recent activity</h3>
+          <div class="activity-list" id="activityList">
+            <div class="activity-empty">Loading…</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<footer id="footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="/" class="logo" style="font-size:20px;">
+          <svg class="bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
+          Flash<span class="ino">ino</span>
+        </a>
+        <p>A modern gaming platform built for speed, transparency, and fair odds. Play smart, play safe.</p>
+        <div class="social-row">
+          <a href="#" aria-label="Discord"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 12h.01M16 12h.01"/></svg></a>
+          <a href="#" aria-label="X / Twitter"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l16 16M20 4 4 20"/></svg></a>
+          <a href="#" aria-label="Twitch"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 8v5M14 8v5"/></svg></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Games</h4>
+        <ul>
+          <li><a href="/#games">Crash</a></li>
+          <li><a href="/#games">Coinflip</a></li>
+          <li><a href="/#games">Mines</a></li>
+          <li><a href="/#games">Case Battles</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#">About</a></li>
+          <li><a href="#">Careers</a></li>
+          <li><a href="#">Blog</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <ul>
+          <li><a href="#">Help center</a></li>
+          <li><a href="#">Contact us</a></li>
+          <li><a href="/#trust">Fair play</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="#">Terms of service</a></li>
+          <li><a href="#">Privacy policy</a></li>
+          <li><a href="#">Responsible gambling</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Flashino. All rights reserved.</p>
+      <div class="age-badge">
+        <span class="pill">18+</span>
+        Play responsibly. Gambling can be addictive — set limits and take breaks.
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ================= MODALS ================= -->
+<!-- ================= AUTH MODAL ================= -->
+<div class="modal-overlay" id="modal-auth">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="authTitle">Create your account</h3>
+        <p>Real account, play-money balance.</p>
+      </div>
+      <button class="modal-close" data-modal-close><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <form id="authForm">
+      <div class="field">
+        <label for="authUser">Username</label>
+        <input id="authUser" type="text" placeholder="3-20 characters" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username">
+        <div id="authUserStatus" style="font-size:11.5px; margin-top:6px; min-height:14px; color:var(--text-3);"></div>
+      </div>
+      <div class="field">
+        <label for="authPass">Password</label>
+        <input id="authPass" type="password" placeholder="At least 8 characters" required minlength="8" autocomplete="current-password">
+      </div>
+      <p id="authError" style="color:var(--red); font-size:12.5px; min-height:16px; margin:0 0 10px;"></p>
+      <button type="submit" class="btn btn-primary" id="authSubmitBtn">Create account</button>
+      <p class="fine">Starting balance is 1,000 play-money credits. No deposits, no withdrawals, no real value.</p>
+    </form>
+    <p class="switch">
+      <span id="authSwitchText">Already have an account?</span>
+      <a href="#" id="authSwitchLink">Log in</a>
+    </p>
+  </div>
+</div>
+
+<script src="/app.js?v=20260710b"></script>
+<script>
+  document.getElementById('gateSignInBtn').addEventListener('click', function(){ requireLogin(); });
+  mountGamePage('blackjack');
+  loadRecentActivity('blackjack');
+</script>
+</body>
+</html>
